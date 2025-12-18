@@ -6,10 +6,10 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
 # -----------------------------
-# Download required NLTK data
+# Cloud-safe NLTK downloads
 # -----------------------------
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 ps = PorterStemmer()
 
@@ -20,32 +20,28 @@ def transform_text(text):
     text = text.lower()
     text = nltk.word_tokenize(text)
 
-    y = []
-    for i in text:
-        if i.isalnum():
-            y.append(i)
+    # Remove non-alphanumeric tokens
+    words = [word for word in text if word.isalnum()]
 
-    text = y[:]
-    y.clear()
+    # Remove stopwords and punctuation, apply stemming
+    cleaned_words = [
+        ps.stem(word) 
+        for word in words 
+        if word not in stopwords.words('english') and word not in string.punctuation
+    ]
 
-    for i in text:
-        if i not in stopwords.words('english') and i not in string.punctuation:
-            y.append(ps.stem(i))
-
-    return " ".join(y)
+    return " ".join(cleaned_words)
 
 # -----------------------------
 # Load trained model & vectorizer
 # -----------------------------
-tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
-model = pickle.load(open('model.pkl', 'rb'))
-
+tfidf = pickle.load(open('vectorizer.pkl', 'rb'))   # Make sure this file exists
+model = pickle.load(open('model.pkl', 'rb'))        # Make sure this file exists
 
 # -----------------------------
 # Streamlit UI
 # -----------------------------
 st.title("📩 SMS Spam Classifier")
-
 st.write("Enter an SMS message to check whether it is **Spam** or **Ham**.")
 
 input_sms = st.text_area("Enter the message")
