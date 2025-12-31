@@ -2,41 +2,50 @@ import streamlit as st
 import pickle
 import nltk
 import string
+import os
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+from nltk.tokenize import word_tokenize
 
 # -----------------------------
-# Cloud-safe NLTK downloads
+# Cloud-safe NLTK setup (HF + Streamlit)
 # -----------------------------
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
+NLTK_DATA_DIR = os.path.join(os.getcwd(), "nltk_data")
+os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 
+nltk.data.path.append(NLTK_DATA_DIR)
+
+nltk.download("punkt", download_dir=NLTK_DATA_DIR)
+nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
+
+# -----------------------------
+# Initialize tools once
+# -----------------------------
 ps = PorterStemmer()
+stop_words = set(stopwords.words("english"))
 
 # -----------------------------
 # Text preprocessing function
 # -----------------------------
 def transform_text(text):
     text = text.lower()
-    text = nltk.word_tokenize(text)
+    tokens = word_tokenize(text)
 
-    # Remove non-alphanumeric tokens
-    words = [word for word in text if word.isalnum()]
-
-    # Remove stopwords and punctuation, apply stemming
-    cleaned_words = [
-        ps.stem(word) 
-        for word in words 
-        if word not in stopwords.words('english') and word not in string.punctuation
-    ]
+    cleaned_words = []
+    for word in tokens:
+        if word.isalnum() and word not in stop_words:
+            cleaned_words.append(ps.stem(word))
 
     return " ".join(cleaned_words)
 
 # -----------------------------
 # Load trained model & vectorizer
 # -----------------------------
-tfidf = pickle.load(open('vectorizer.pkl', 'rb'))   # Make sure this file exists
-model = pickle.load(open('model.pkl', 'rb'))        # Make sure this file exists
+with open("vectorizer.pkl", "rb") as f:
+    tfidf = pickle.load(f)
+
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
 
 # -----------------------------
 # Streamlit UI
@@ -53,16 +62,10 @@ if st.button("Predict"):
     if input_sms.strip() == "":
         st.warning("Please enter a message.")
     else:
-        # 1. Preprocess
         transformed_sms = transform_text(input_sms)
-
-        # 2. Vectorize
         vector_input = tfidf.transform([transformed_sms])
-
-        # 3. Predict
         result = model.predict(vector_input)[0]
 
-        # 4. Display result
         if result == 1:
             st.error("🚨 This message is SPAM")
         else:
