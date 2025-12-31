@@ -1,3 +1,5 @@
-streamlit
+gradio
 scikit-learn
 nltk
+numpy
+pandas
